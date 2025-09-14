@@ -323,7 +323,7 @@ class _ScreenSettingsState extends State<ScreenSettings> {
   final hostInputController = TextEditingController(
       text: (useHost)
           ? fixedHost
-          : (prefs?.getString("host") ?? "http://localhost:11434"));
+          : (prefs?.getString("host") ?? "http://example.com:11434"));
   bool hostLoading = false;
   bool hostInvalidUrl = false;
   bool hostInvalidHost = false;

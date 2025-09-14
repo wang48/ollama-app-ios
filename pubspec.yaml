@@ -52,6 +52,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -65,3 +66,8 @@ flutter:
     - assets/welcome/1dark.png
     - assets/welcome/2dark.png
     - assets/welcome/3dark.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon_ios_1024.png"
