@@ -24,9 +24,11 @@
 
 - 此应用不是 Ollama 官方客户端.
 
-## 安装
+## App Store
 
-App Store 搜索 GetOAI
+> App Store 搜索 GetOAI
+
+[![下载应用](https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg)](https://apps.apple.com/cn/app/getoai/id6752573799)
 
 ## 开发启动
 
@@ -70,3 +72,14 @@ App Store 搜索 GetOAI
 
 - 选择使用模拟器或者真机运行
 
+## 已知问题
+
+> 由于 iOS 权限机制不同, 为了确兼容性, 以下问题可能不会被修复.
+
+- 第一次启动时需要在 **设置** -> **主机地址** 输入任意域名并保存, 此时才会弹出联网权限获取窗口, 例如 `http://example.com:11434`
+
+- 推理模型输出有延迟, 导致开头回复 `<think>` 标签丢失, 下半部分 `</think>` 标签会被直接输出
+
+- 语音权限无法获取
+
+- 多模态模型图片暂不可用

@@ -22,9 +22,11 @@ The iOS client of [Ollama App](https://github.com/JHubi1/ollama-app). This repos
 
 - This application is not the official Ollama client.
 
-## Installation
+## App Store
 
-Search for **GetOAI** on the App Store.
+> Search for **GetOAI** on the App Store
+
+[![Download on the App Store](https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg)](https://apps.apple.com/us/app/getoai/id6752573799)
 
 ## Development Setup
 
@@ -65,3 +67,15 @@ Ensure the following items show ✅:
     ```
 
 - Choose to run on **simulator** or **physical device**.
+
+## Known Issues
+
+> Due to differences in iOS permission mechanisms, for compatibility reasons, the following issues may not be fixed.
+
+- On first launch, you need to go to **Settings** -> **Host Address**, enter any domain, and save it. Only then will the network permission prompt appear. For example: `http://example.com:11434`
+
+- There is a delay in inference model output, causing the opening `<think>` tag to be missing, while the closing `</think>` tag will be output directly.
+
+- Microphone permission cannot be obtained.
+
+- Images for multimodal models are currently unavailable.
