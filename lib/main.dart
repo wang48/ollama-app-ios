@@ -959,13 +959,13 @@ class _MainAppState extends State<MainApp> {
               });
         }
 
-        // prefs!.remove("welcomeFinished");
-        if (!(prefs!.getBool("welcomeFinished") ?? false) && allowSettings) {
-          // ignore: use_build_context_synchronously
-          Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => const ScreenWelcome()));
-          return;
-        }
+        // // prefs!.remove("welcomeFinished");
+        // if (!(prefs!.getBool("welcomeFinished") ?? false) && allowSettings) {
+        //   // ignore: use_build_context_synchronously
+        //   Navigator.of(context).pushReplacement(
+        //       MaterialPageRoute(builder: (context) => const ScreenWelcome()));
+        //   return;
+        // }
 
         if (!allowMultipleChats &&
             (prefs!.getStringList("chats") ?? []).isNotEmpty) {
