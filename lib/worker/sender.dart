@@ -88,6 +88,10 @@ List getHistoryString([String? uuid]) {
 }
 
 Future<String> getTitleAi(List history) async {
+  final locale = mainContext != null
+      ? Localizations.localeOf(mainContext!)
+      : WidgetsBinding.instance.platformDispatcher.locale;
+  final localeTag = locale.toLanguageTag();
   final generated = await ollamaClient
       .generateChatCompletion(
         request: llama.GenerateChatCompletionRequest(
@@ -96,10 +100,11 @@ Future<String> getTitleAi(List history) async {
               const llama.Message(
                   role: llama.MessageRole.system,
                   content:
-                      "Generate a three to six word title for the conversation provided by the user. If an object or person is very important in the conversation, put it in the title as well; keep the focus on the main subject. You must not put the assistant in the focus and you must not put the word 'assistant' in the title! Do preferably use title case. Use a formal tone, don't use dramatic words, like 'mystery' Use spaces between words, do not use camel case! You must not use markdown or any other formatting language! You must not use emojis or any other symbols! You must not use general clauses like 'assistance', 'help' or 'session' in your title! \n\n~~User Introduces Themselves~~ -> User Introduction\n~~User Asks for Help with a Problem~~ -> Problem Help\n~~User has a _**big**_ Problem~~ -> Big Problem"),
+                      "You generate concise three to six word titles that summarise the conversation's main topic. Follow the locale provided by the user, never mention the assistant, and avoid markdown, emojis, or generic words like 'session'."),
               llama.Message(
                   role: llama.MessageRole.user,
-                  content: "```\n${jsonEncode(history)}\n```")
+                  content:
+                      "Locale: $localeTag\nConversation transcript:\n```\n${jsonEncode(history)}\n```")
             ],
             keepAlive: int.parse(prefs!.getString("keepAlive") ?? "300")),
       )
