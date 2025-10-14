@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -114,6 +115,31 @@ void main() {
   }
 }
 
+Future<void> _requestInitialNetworkPermission() async {
+  if (prefs == null || kIsWeb) {
+    return;
+  }
+  if (!Platform.isIOS) {
+    return;
+  }
+  if (prefs!.getBool("networkPermissionRequested") ?? false) {
+    return;
+  }
+
+  final uri = Uri.parse(fixedHost);
+  HttpClient? client;
+  try {
+    client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 5);
+    final request = await client.getUrl(uri);
+    await request.close().timeout(const Duration(seconds: 5));
+  } catch (_) {
+  } finally {
+    client?.close(force: true);
+    await prefs!.setBool("networkPermissionRequested", true);
+  }
+}
+
 class App extends StatefulWidget {
   const App({
     super.key,
@@ -138,6 +164,8 @@ class _AppState extends State<App> {
       setState(() {
         prefs = tmp;
       });
+
+      unawaited(_requestInitialNetworkPermission());
 
       try {
         if ((await Permission.bluetoothConnect.isGranted) &&
@@ -825,6 +853,7 @@ class _MainAppState extends State<MainApp> {
         }
 
         setState(() {});
+        unawaited(_requestInitialNetworkPermission());
         if (prefs!.getBool("checkUpdateOnSettingsOpen") ?? true) {
           updateDetectedOnStart = await checkUpdate(setState);
         }
