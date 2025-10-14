@@ -295,7 +295,6 @@ Future<String> send(String value, BuildContext context, Function setState,
           onStream(combinedAnswer, false);
         }
         setState(() {});
-        heavyHaptic();
       }
       final payload = parseRawAssistantText(text);
       final combinedReasoning = payload.reasoning.isNotEmpty
@@ -337,6 +336,7 @@ Future<String> send(String value, BuildContext context, Function setState,
         }
       }
       setState(() {});
+      heavyHaptic();
     } else {
       llama.GenerateChatCompletionResponse request;
       final DateTime nonStreamStart = DateTime.now();
