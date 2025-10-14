@@ -225,6 +225,7 @@ Future<String> send(String value, BuildContext context, Function setState,
   final DateTime requestStartedAt = DateTime.now();
   DateTime? reasoningStart;
   DateTime? reasoningEnd;
+  String reasoningBuffer = "";
 
   try {
     if ((prefs!.getString("requestType") ?? "stream") == "stream") {
@@ -241,12 +242,22 @@ Future<String> send(String value, BuildContext context, Function setState,
 
       await for (final res in stream) {
         text += (res.message.content);
-        final payload = parseRawAssistantText(text);
-        if (payload.reasoning.isNotEmpty) {
+        final thinkingChunk = res.message.thinking;
+        if (thinkingChunk != null && thinkingChunk.isNotEmpty) {
+          reasoningBuffer += thinkingChunk;
           reasoningStart ??= DateTime.now();
-          if (payload.thinkClosed) {
-            reasoningEnd ??= DateTime.now();
-          }
+        }
+        final payload = parseRawAssistantText(text);
+        final combinedReasoning = payload.reasoning.isNotEmpty
+            ? payload.reasoning
+            : reasoningBuffer.trimRight();
+        String combinedAnswer =
+            (payload.answer.isNotEmpty ? payload.answer : text);
+        final hasReasoning = combinedReasoning.isNotEmpty;
+        final thinkClosed =
+            payload.reasoning.isNotEmpty ? payload.thinkClosed : res.done;
+        if (hasReasoning && thinkClosed && reasoningEnd == null) {
+          reasoningEnd = DateTime.now();
         }
         int? durationMs;
         final start = reasoningStart;
@@ -254,9 +265,14 @@ Future<String> send(String value, BuildContext context, Function setState,
         if (start != null && end != null) {
           durationMs = end.difference(start).inMilliseconds;
         }
-        String messageContent = text;
-        if (payload.reasoning.isNotEmpty && payload.thinkClosed) {
-          final updatedPayload = payload.copyWith(durationMs: durationMs);
+        String messageContent = combinedAnswer;
+        if (hasReasoning) {
+          final updatedPayload = ReasoningPayload(
+            reasoning: combinedReasoning,
+            answer: combinedAnswer,
+            thinkClosed: thinkClosed,
+            durationMs: durationMs,
+          );
           messageContent =
               "${updatedPayload.answer}${encodeReasoningComment(updatedPayload)}";
         }
@@ -276,13 +292,18 @@ Future<String> send(String value, BuildContext context, Function setState,
         // chatKey!.currentState!.scrollToMessage(messages[1].id,
         //     preferPosition: AutoScrollPosition.end);
         if (onStream != null) {
-          onStream(payload.answer, false);
+          onStream(combinedAnswer, false);
         }
         setState(() {});
         heavyHaptic();
       }
       final payload = parseRawAssistantText(text);
-      if (payload.reasoning.isNotEmpty) {
+      final combinedReasoning = payload.reasoning.isNotEmpty
+          ? payload.reasoning
+          : reasoningBuffer.trimRight();
+      String combinedAnswer = payload.answer.isNotEmpty ? payload.answer : text;
+      final hasReasoning = combinedReasoning.isNotEmpty;
+      if (hasReasoning) {
         reasoningStart ??= requestStartedAt;
         reasoningEnd ??= DateTime.now();
       }
@@ -292,14 +313,21 @@ Future<String> send(String value, BuildContext context, Function setState,
       if (start != null && end != null) {
         durationMs = end.difference(start).inMilliseconds;
       }
-      String finalMessageText = payload.answer;
-      if (payload.reasoning.isNotEmpty) {
-        final finalPayload = payload.copyWith(durationMs: durationMs);
+      final thinkClosed =
+          payload.reasoning.isNotEmpty ? payload.thinkClosed : true;
+      String finalMessageText = combinedAnswer;
+      if (hasReasoning) {
+        final finalPayload = ReasoningPayload(
+          reasoning: combinedReasoning,
+          answer: combinedAnswer,
+          thinkClosed: thinkClosed,
+          durationMs: durationMs,
+        );
         finalMessageText =
             "${finalPayload.answer}${encodeReasoningComment(finalPayload)}";
         text = finalPayload.answer;
       } else {
-        text = payload.answer;
+        text = combinedAnswer;
       }
       for (var i = 0; i < messages.length; i++) {
         if (messages[i].id == newId) {
@@ -324,17 +352,26 @@ Future<String> send(String value, BuildContext context, Function setState,
                   .round()));
       if (chatAllowed) return "";
       final payload = parseRawAssistantText(request.message.content);
-      String assistantMessage = payload.answer;
-      if (payload.reasoning.isNotEmpty) {
+      final thinking = request.message.thinking?.trim() ?? "";
+      final combinedReasoning =
+          payload.reasoning.isNotEmpty ? payload.reasoning : thinking;
+      String assistantMessage =
+          payload.answer.isNotEmpty ? payload.answer : request.message.content;
+      if (combinedReasoning.isNotEmpty) {
         final durationMs =
             DateTime.now().difference(nonStreamStart).inMilliseconds;
-        final finalPayload = payload.copyWith(
-            durationMs: durationMs, thinkClosed: payload.thinkClosed);
+        final finalPayload = ReasoningPayload(
+          reasoning: combinedReasoning,
+          answer: assistantMessage,
+          thinkClosed:
+              payload.reasoning.isNotEmpty ? payload.thinkClosed : true,
+          durationMs: durationMs,
+        );
         assistantMessage =
             "${finalPayload.answer}${encodeReasoningComment(finalPayload)}";
         text = finalPayload.answer;
       } else {
-        text = payload.answer;
+        text = assistantMessage;
       }
       messages.insert(
           0,
