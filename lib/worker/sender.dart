@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:ollama_app/worker/clients.dart';
 
 import 'haptic.dart';
+import 'reasoning.dart';
 import 'setter.dart';
 import '../main.dart';
 
@@ -39,7 +40,8 @@ Future<List<llama.Message>> getHistory([String? addToSystem]) async {
           role: (messages[i].author.id == user.id)
               ? llama.MessageRole.user
               : llama.MessageRole.system,
-          content: jsonDecode(jsonEncode(messages[i]))["text"],
+          content: stripReasoningComment(
+              jsonDecode(jsonEncode(messages[i]))["text"] as String),
           images: (images.isNotEmpty) ? images : null));
       images = [];
     } else {
@@ -76,6 +78,9 @@ List getHistoryString([String? uuid]) {
         "role": messages[i]["role"]!,
         "content": "<${messages[i]["role"]} inserted an image>"
       };
+    } else if ((messages[i] as Map).containsKey("content")) {
+      messages[i]["content"] =
+          stripReasoningComment(messages[i]["content"] as String);
     }
   }
 
@@ -217,6 +222,9 @@ Future<String> send(String value, BuildContext context, Function setState,
 
   String text = "";
   String newId = const Uuid().v4();
+  final DateTime requestStartedAt = DateTime.now();
+  DateTime? reasoningStart;
+  DateTime? reasoningEnd;
 
   try {
     if ((prefs!.getString("requestType") ?? "stream") == "stream") {
@@ -233,6 +241,25 @@ Future<String> send(String value, BuildContext context, Function setState,
 
       await for (final res in stream) {
         text += (res.message.content);
+        final payload = parseRawAssistantText(text);
+        if (payload.reasoning.isNotEmpty) {
+          reasoningStart ??= DateTime.now();
+          if (payload.thinkClosed) {
+            reasoningEnd ??= DateTime.now();
+          }
+        }
+        int? durationMs;
+        final start = reasoningStart;
+        final end = reasoningEnd;
+        if (start != null && end != null) {
+          durationMs = end.difference(start).inMilliseconds;
+        }
+        String messageContent = text;
+        if (payload.reasoning.isNotEmpty && payload.thinkClosed) {
+          final updatedPayload = payload.copyWith(durationMs: durationMs);
+          messageContent =
+              "${updatedPayload.answer}${encodeReasoningComment(updatedPayload)}";
+        }
         for (var i = 0; i < messages.length; i++) {
           if (messages[i].id == newId) {
             messages.removeAt(i);
@@ -241,19 +268,50 @@ Future<String> send(String value, BuildContext context, Function setState,
         }
         if (chatAllowed) return "";
         messages.insert(
-            0, types.TextMessage(author: assistant, id: newId, text: text));
+            0,
+            types.TextMessage(
+                author: assistant, id: newId, text: messageContent));
         //TODO: add functionality
         //
         // chatKey!.currentState!.scrollToMessage(messages[1].id,
         //     preferPosition: AutoScrollPosition.end);
         if (onStream != null) {
-          onStream(text, false);
+          onStream(payload.answer, false);
         }
         setState(() {});
         heavyHaptic();
       }
+      final payload = parseRawAssistantText(text);
+      if (payload.reasoning.isNotEmpty) {
+        reasoningStart ??= requestStartedAt;
+        reasoningEnd ??= DateTime.now();
+      }
+      int? durationMs;
+      final start = reasoningStart;
+      final end = reasoningEnd;
+      if (start != null && end != null) {
+        durationMs = end.difference(start).inMilliseconds;
+      }
+      String finalMessageText = payload.answer;
+      if (payload.reasoning.isNotEmpty) {
+        final finalPayload = payload.copyWith(durationMs: durationMs);
+        finalMessageText =
+            "${finalPayload.answer}${encodeReasoningComment(finalPayload)}";
+        text = finalPayload.answer;
+      } else {
+        text = payload.answer;
+      }
+      for (var i = 0; i < messages.length; i++) {
+        if (messages[i].id == newId) {
+          messages[i] = types.TextMessage(
+              author: assistant, id: newId, text: finalMessageText);
+          break;
+        }
+      }
+      setState(() {});
     } else {
       llama.GenerateChatCompletionResponse request;
+      final DateTime nonStreamStart = DateTime.now();
       request = await ollamaClient
           .generateChatCompletion(
             request: llama.GenerateChatCompletionRequest(
@@ -265,11 +323,23 @@ Future<String> send(String value, BuildContext context, Function setState,
               seconds: (30.0 * (prefs!.getDouble("timeoutMultiplier") ?? 1.0))
                   .round()));
       if (chatAllowed) return "";
+      final payload = parseRawAssistantText(request.message.content);
+      String assistantMessage = payload.answer;
+      if (payload.reasoning.isNotEmpty) {
+        final durationMs =
+            DateTime.now().difference(nonStreamStart).inMilliseconds;
+        final finalPayload = payload.copyWith(
+            durationMs: durationMs, thinkClosed: payload.thinkClosed);
+        assistantMessage =
+            "${finalPayload.answer}${encodeReasoningComment(finalPayload)}";
+        text = finalPayload.answer;
+      } else {
+        text = payload.answer;
+      }
       messages.insert(
           0,
           types.TextMessage(
-              author: assistant, id: newId, text: request.message.content));
-      text = request.message.content;
+              author: assistant, id: newId, text: assistantMessage));
       setState(() {});
       heavyHaptic();
     }

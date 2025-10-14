@@ -11,7 +11,6 @@ import 'package:ollama_app/l10n/gen/app_localizations.dart';
 
 import 'screen_settings.dart';
 import 'screen_voice.dart';
-import 'screen_welcome.dart';
 import 'worker/setter.dart';
 import 'worker/haptic.dart';
 import 'worker/sender.dart';
@@ -19,6 +18,7 @@ import 'worker/desktop.dart';
 import 'worker/theme.dart';
 import 'worker/update.dart';
 import 'worker/clients.dart';
+import 'worker/reasoning.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 // ignore: depend_on_referenced_packages
@@ -112,6 +112,128 @@ void main() {
       }
       appWindow.show();
     });
+  }
+}
+
+class ReasoningSection extends StatefulWidget {
+  const ReasoningSection({
+    super.key,
+    required this.reasoning,
+    required this.initiallyCollapsed,
+    required this.durationMs,
+    required this.canToggle,
+  });
+
+  final String reasoning;
+  final bool initiallyCollapsed;
+  final int? durationMs;
+  final bool canToggle;
+
+  @override
+  State<ReasoningSection> createState() => _ReasoningSectionState();
+}
+
+class _ReasoningSectionState extends State<ReasoningSection> {
+  late bool _collapsed;
+
+  @override
+  void initState() {
+    super.initState();
+    _collapsed = widget.initiallyCollapsed;
+  }
+
+  @override
+  void didUpdateWidget(covariant ReasoningSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.initiallyCollapsed && widget.initiallyCollapsed) {
+      _collapsed = true;
+    }
+    if (oldWidget.initiallyCollapsed && !widget.initiallyCollapsed) {
+      _collapsed = false;
+    }
+    if (oldWidget.reasoning != widget.reasoning && !widget.initiallyCollapsed) {
+      _collapsed = false;
+    }
+  }
+
+  void _toggle() {
+    if (!widget.canToggle) return;
+    setState(() {
+      _collapsed = !_collapsed;
+    });
+  }
+
+  String? _durationLabel() {
+    final durationMs = widget.durationMs;
+    if (durationMs == null) return null;
+    if (durationMs < 1000) {
+      return "${durationMs}ms";
+    }
+    final seconds = durationMs / 1000;
+    if (seconds >= 10) {
+      return "${seconds.toStringAsFixed(0)}s";
+    }
+    return "${seconds.toStringAsFixed(1)}s";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final baseColor = Theme.of(context).colorScheme.onSurface;
+    final color = baseColor.withValues(alpha: 0.6);
+    final labelStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: color,
+              fontSize: 13,
+            ) ??
+        TextStyle(color: color, fontSize: 13);
+    final reasoningStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: color,
+              fontSize: 14,
+              height: 1.35,
+            ) ??
+        TextStyle(color: color, fontSize: 14, height: 1.35);
+    final durationLabel = _durationLabel();
+    final label =
+        durationLabel != null ? "Reasoning · $durationLabel" : "Reasoning";
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.canToggle ? _toggle : null,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.psychology_alt_outlined, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text(label, style: labelStyle),
+              if (widget.canToggle)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Icon(
+                    _collapsed ? Icons.expand_more : Icons.expand_less,
+                    size: 14,
+                    color: color,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: SelectableText(
+              widget.reasoning,
+              style: reasoningStyle,
+            ),
+          ),
+          crossFadeState:
+              _collapsed ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          duration: const Duration(milliseconds: 150),
+        )
+      ],
+    );
   }
 }
 
@@ -1054,12 +1176,115 @@ class _MainAppState extends State<MainApp> {
                                   {required messageWidth, required showName}) {
                                 var white =
                                     const TextStyle(color: Colors.white);
-                                bool greyed = false;
-                                String text = p0.text;
-                                if (text.trim() == "") {
+                                final bool isUserMessage = p0.author == user;
+                                final rawText = p0.text;
+                                ReasoningPayload? reasoningPayload;
+                                if (!isUserMessage) {
+                                  reasoningPayload =
+                                      decodeReasoningComment(rawText);
+                                  if (reasoningPayload == null &&
+                                      rawText
+                                          .toLowerCase()
+                                          .contains("<think>")) {
+                                    reasoningPayload =
+                                        parseRawAssistantText(rawText);
+                                  }
+                                }
+                                final theme = Theme.of(context);
+                                MarkdownStyleSheet styleSheet;
+                                if (isUserMessage) {
+                                  styleSheet = MarkdownStyleSheet(
+                                      p: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500),
+                                      blockquoteDecoration: BoxDecoration(
+                                        color: Colors.grey[800],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      code: const TextStyle(
+                                          color: Colors.black,
+                                          backgroundColor: Colors.white),
+                                      codeblockDecoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      h1: white,
+                                      h2: white,
+                                      h3: white,
+                                      h4: white,
+                                      h5: white,
+                                      h6: white,
+                                      listBullet: white,
+                                      horizontalRuleDecoration: BoxDecoration(
+                                          border: Border(
+                                              top: BorderSide(
+                                                  color: Colors.grey[800]!,
+                                                  width: 1))),
+                                      tableBorder:
+                                          TableBorder.all(color: Colors.white),
+                                      tableBody: white);
+                                } else if (theme.brightness ==
+                                    Brightness.light) {
+                                  styleSheet = MarkdownStyleSheet(
+                                      p: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500),
+                                      blockquoteDecoration: BoxDecoration(
+                                        color: Colors.grey[200],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      code: const TextStyle(
+                                          color: Colors.white,
+                                          backgroundColor: Colors.black),
+                                      codeblockDecoration: BoxDecoration(
+                                          color: Colors.black,
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      horizontalRuleDecoration: BoxDecoration(
+                                          border: Border(
+                                              top: BorderSide(
+                                                  color: Colors.grey[200]!,
+                                                  width: 1))));
+                                } else {
+                                  styleSheet = MarkdownStyleSheet(
+                                      p: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500),
+                                      blockquoteDecoration: BoxDecoration(
+                                        color: Colors.grey[800]!,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      code: const TextStyle(
+                                          color: Colors.black,
+                                          backgroundColor: Colors.white),
+                                      codeblockDecoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      horizontalRuleDecoration: BoxDecoration(
+                                          border: Border(
+                                              top: BorderSide(
+                                                  color: Colors.grey[200]!,
+                                                  width: 1))));
+                                }
+                                String text = stripReasoningComment(rawText);
+                                final reasoningData =
+                                    reasoningPayload != null &&
+                                            reasoningPayload.reasoning
+                                                .trim()
+                                                .isNotEmpty
+                                        ? reasoningPayload
+                                        : null;
+                                if (reasoningData != null) {
+                                  text = reasoningData.answer;
+                                }
+                                if (text.trim().isEmpty &&
+                                    reasoningData == null) {
                                   text =
                                       "_Empty AI response, try restarting conversation_";
-                                  greyed = true;
                                 }
                                 return Padding(
                                     padding: const EdgeInsets.only(
@@ -1074,155 +1299,114 @@ class _MainAppState extends State<MainApp> {
                                                   thumbColor:
                                                       WidgetStatePropertyAll(
                                                           Colors.grey))),
-                                      child: MarkdownBody(
-                                          data: text,
-                                          onTapLink: (text, href, title) async {
-                                            selectionHaptic();
-                                            try {
-                                              var url = Uri.parse(href!);
-                                              if (await canLaunchUrl(url)) {
-                                                launchUrl(
-                                                    mode: LaunchMode
-                                                        .inAppBrowserView,
-                                                    url);
-                                              } else {
-                                                throw Exception();
-                                              }
-                                            } catch (_) {
-                                              // ignore: use_build_context_synchronously
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(SnackBar(
-                                                      content: Text(
-                                                          AppLocalizations.of(
-                                                                  // ignore: use_build_context_synchronously
-                                                                  context)!
-                                                              .settingsHostInvalid(
-                                                                  "url")),
-                                                      showCloseIcon: true));
-                                            }
-                                          },
-                                          extensionSet: md.ExtensionSet(
-                                            md.ExtensionSet.gitHubFlavored
-                                                .blockSyntaxes,
-                                            <md.InlineSyntax>[
-                                              md.EmojiSyntax(),
-                                              ...md.ExtensionSet.gitHubFlavored
-                                                  .inlineSyntaxes
-                                            ],
-                                          ),
-                                          imageBuilder: (uri, title, alt) {
-                                            Widget errorImage = InkWell(
-                                                onTap: () {
-                                                  selectionHaptic();
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          if (reasoningData != null)
+                                            Padding(
+                                                padding: const EdgeInsets.only(
+                                                    bottom: 12),
+                                                child: ReasoningSection(
+                                                  key: ValueKey(
+                                                      "reasoning-${p0.id}"),
+                                                  reasoning:
+                                                      reasoningData.reasoning,
+                                                  initiallyCollapsed:
+                                                      reasoningData.thinkClosed,
+                                                  durationMs:
+                                                      reasoningData.durationMs,
+                                                  canToggle:
+                                                      reasoningData.thinkClosed,
+                                                )),
+                                          MarkdownBody(
+                                              data: text,
+                                              onTapLink:
+                                                  (text, href, title) async {
+                                                selectionHaptic();
+                                                try {
+                                                  var url = Uri.parse(href!);
+                                                  if (await canLaunchUrl(url)) {
+                                                    launchUrl(
+                                                        mode: LaunchMode
+                                                            .inAppBrowserView,
+                                                        url);
+                                                  } else {
+                                                    throw Exception();
+                                                  }
+                                                } catch (_) {
+                                                  // ignore: use_build_context_synchronously
                                                   ScaffoldMessenger.of(context)
                                                       .showSnackBar(SnackBar(
                                                           content: Text(
                                                               AppLocalizations.of(
+                                                                      // ignore: use_build_context_synchronously
                                                                       context)!
-                                                                  .notAValidImage),
+                                                                  .settingsHostInvalid(
+                                                                      "url")),
                                                           showCloseIcon: true));
-                                                },
-                                                child: Container(
-                                                    decoration: BoxDecoration(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(8),
-                                                        color: Theme.of(context)
-                                                                    .brightness ==
-                                                                Brightness.light
-                                                            ? Colors.white
-                                                            : Colors.black),
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                            left: 100,
-                                                            right: 100,
-                                                            top: 32),
-                                                    child: const Image(
-                                                        image: AssetImage(
-                                                            "assets/logo512error.png"))));
-                                            if (uri.isAbsolute) {
-                                              return Image.network(
-                                                  uri.toString(), errorBuilder:
-                                                      (context, error,
-                                                          stackTrace) {
-                                                return errorImage;
-                                              });
-                                            } else {
-                                              return errorImage;
-                                            }
-                                          },
-                                          styleSheet: (p0.author == user)
-                                              ? MarkdownStyleSheet(
-                                                  p: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w500),
-                                                  blockquoteDecoration:
-                                                      BoxDecoration(
-                                                    color: Colors.grey[800],
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8),
-                                                  ),
-                                                  code: const TextStyle(
-                                                      color: Colors.black,
-                                                      backgroundColor:
-                                                          Colors.white),
-                                                  codeblockDecoration: BoxDecoration(
-                                                      color: Colors.white,
-                                                      borderRadius: BorderRadius.circular(
-                                                          8)),
-                                                  h1: white,
-                                                  h2: white,
-                                                  h3: white,
-                                                  h4: white,
-                                                  h5: white,
-                                                  h6: white,
-                                                  listBullet: white,
-                                                  horizontalRuleDecoration: BoxDecoration(
-                                                      border: Border(
-                                                          top: BorderSide(
-                                                              color: Colors
-                                                                  .grey[800]!,
-                                                              width: 1))),
-                                                  tableBorder: TableBorder.all(
-                                                      color: Colors.white),
-                                                  tableBody: white)
-                                              : (Theme.of(context).brightness ==
-                                                      Brightness.light)
-                                                  ? MarkdownStyleSheet(
-                                                      p: TextStyle(
-                                                          color: greyed
-                                                              ? Colors.grey
-                                                              : Colors.black,
-                                                          fontSize: 16,
-                                                          fontWeight:
-                                                              FontWeight.w500),
-                                                      blockquoteDecoration:
-                                                          BoxDecoration(
-                                                        color: Colors.grey[200],
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(8),
-                                                      ),
-                                                      code: const TextStyle(
-                                                          color: Colors.white,
-                                                          backgroundColor: Colors.black),
-                                                      codeblockDecoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
-                                                      horizontalRuleDecoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1))))
-                                                  : MarkdownStyleSheet(
-                                                      p: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
-                                                      blockquoteDecoration: BoxDecoration(
-                                                        color:
-                                                            Colors.grey[800]!,
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(8),
-                                                      ),
-                                                      code: const TextStyle(color: Colors.black, backgroundColor: Colors.white),
-                                                      codeblockDecoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                                                      horizontalRuleDecoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1))))),
+                                                }
+                                              },
+                                              extensionSet: md.ExtensionSet(
+                                                md.ExtensionSet.gitHubFlavored
+                                                    .blockSyntaxes,
+                                                <md.InlineSyntax>[
+                                                  md.EmojiSyntax(),
+                                                  ...md
+                                                      .ExtensionSet
+                                                      .gitHubFlavored
+                                                      .inlineSyntaxes
+                                                ],
+                                              ),
+                                              imageBuilder: (uri, title, alt) {
+                                                Widget errorImage = InkWell(
+                                                    onTap: () {
+                                                      selectionHaptic();
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(SnackBar(
+                                                              content: Text(
+                                                                  AppLocalizations.of(
+                                                                          context)!
+                                                                      .notAValidImage),
+                                                              showCloseIcon:
+                                                                  true));
+                                                    },
+                                                    child: Container(
+                                                        decoration: BoxDecoration(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                            color: Theme.of(context)
+                                                                        .brightness ==
+                                                                    Brightness
+                                                                        .light
+                                                                ? Colors.white
+                                                                : Colors.black),
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                                left: 100,
+                                                                right: 100,
+                                                                top: 32),
+                                                        child: const Image(
+                                                            image: AssetImage(
+                                                                "assets/logo512error.png"))));
+                                                if (uri.isAbsolute) {
+                                                  return Image.network(
+                                                      uri.toString(),
+                                                      errorBuilder: (context,
+                                                          error, stackTrace) {
+                                                    return errorImage;
+                                                  });
+                                                } else {
+                                                  return errorImage;
+                                                }
+                                              },
+                                              styleSheet: styleSheet),
+                                        ],
+                                      ),
                                     ));
                               },
                               imageMessageBuilder: (p0,
@@ -1310,8 +1494,9 @@ class _MainAppState extends State<MainApp> {
                                   }
                                 }
 
-                                var text =
-                                    (messages[index] as types.TextMessage).text;
+                                var text = stripReasoningComment(
+                                    (messages[index] as types.TextMessage)
+                                        .text);
                                 var input = await prompt(
                                   context,
                                   title: AppLocalizations.of(context)!
