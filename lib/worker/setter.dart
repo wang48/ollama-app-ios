@@ -708,7 +708,7 @@ Future<bool> deleteChatDialog(BuildContext context, Function setState,
     }
   }
 
-  if ((prefs!.getBool("askBeforeDeletion") ?? false) && additionalCondition) {
+  if ((prefs!.getBool("askBeforeDeletion") ?? true) && additionalCondition) {
     await showDialog(
         context: context,
         builder: (context) {

@@ -133,7 +133,7 @@ class _ScreenSettingsInterfaceState extends State<ScreenSettingsInterface> {
                       toggle(
                           context,
                           AppLocalizations.of(context)!.settingsAskBeforeDelete,
-                          (prefs!.getBool("askBeforeDeletion") ?? false),
+                          (prefs!.getBool("askBeforeDeletion") ?? true),
                           (value) {
                         selectionHaptic();
                         prefs!.setBool("askBeforeDeletion", value);
