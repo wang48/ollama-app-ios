@@ -623,7 +623,7 @@ class _MainAppState extends State<MainApp> {
         final theme = Theme.of(context);
         final Color highlightColor = isCurrentChat
             ? theme.colorScheme.primary.withValues(
-                alpha: theme.brightness == Brightness.dark ? 0.28 : 0.16)
+                alpha: theme.brightness == Brightness.dark ? 0.24 : 0.08)
             : isHoveredChat
                 ? theme.colorScheme.onSurface.withValues(
                     alpha: theme.brightness == Brightness.dark ? 0.24 : 0.08,
