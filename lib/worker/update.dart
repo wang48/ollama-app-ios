@@ -17,7 +17,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:version/version.dart';
 
-const repoUrl = "https://github.com/JHubi1/ollama-app";
+const repoUrl = "https://github.com/wang48/ollama-app-ios";
 
 bool updateChecked = false;
 bool updateLoading = false;

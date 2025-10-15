@@ -46,7 +46,7 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>应用需要访问局域网以连接 Ollama 服务</string>
+	<string>The application needs to access the local area network to connect to the Ollama service</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_http._tcp</string>
