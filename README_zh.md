@@ -11,24 +11,37 @@
 <!-- </p> -->
 <br/>
 
-## 支持
 
-[Ollama App](https://github.com/JHubi1/ollama-app) 的 iOS 客户端, 本存储库仅支持 iOS 平台，其他平台请访问 [Ollama App](https://github.com/JHubi1/ollama-app)。
+## 项目说明
 
+本项目为开源项目，在 [Ollama App](https://github.com/JHubi1/ollama-app) 的基础上进行二次开发
 
-## 声明
+- 仅支持 iOS 平台，其他平台请访问 [Ollama App](https://github.com/JHubi1/ollama-app)。
 
-- 由于 "Ollama" 以及 "羊驼图标" 属于注册商标, 我们使用 "GetOAI" 以及 "GetOAI 图标" 上架 App Store.
+- 由于 "Ollama" 以及 "羊驼图标" 属于注册商标, 我们使用 "GetOAI" 以及 "GetOAI 图标" 上架 App Store。
 
-- 上架 App Store 以及维护开发者账号相比其他平台需要更高的成本, 为了此项目的健康发展, 应用采用付费下载.
+- 此项目不是 Ollama 官方项目
 
-- 此应用不是 Ollama 官方客户端.
 
 ## App Store
 
 > App Store 搜索 GetOAI
 
 [![下载应用](https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg)](https://apps.apple.com/cn/app/getoai/id6752573799)
+
+
+## 主要特性
+
+
+1. 支持打印推理模型的推理过程
+
+2. 支持生成跟用户语言匹配的对话标题
+
+3. 突出显示活跃对话
+
+4. 修复 iOS 平台的权限问题
+
+5. 优化使用体验
 
 ## 开发启动
 
@@ -76,10 +89,10 @@
 
 > 由于 iOS 权限机制不同, 为了确兼容性, 以下问题可能不会被修复.
 
-- 第一次启动时需要在 **设置** -> **主机地址** 输入任意域名并保存, 此时才会弹出联网权限获取窗口, 例如 `http://example.com:11434`
+- ~~第一次启动时需要在 **设置** -> **主机地址** 输入任意域名并保存, 此时才会弹出联网权限获取窗口, 例如 `http://example.com:11434`~~
 
-- 推理模型输出有延迟, 导致开头回复 `<think>` 标签丢失, 下半部分 `</think>` 标签会被直接输出
+- ~~推理模型输出有延迟, 导致开头回复 `<think>` 标签丢失, 下半部分 `</think>` 标签会被直接输出~~
 
 - 语音权限无法获取
 
-- 多模态模型图片暂不可用
+- ~~多模态模型图片暂不可用~~

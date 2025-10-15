@@ -10,23 +10,37 @@
 <!-- </p> -->
 <br/>
 
-## Support
 
-The iOS client of [Ollama App](https://github.com/JHubi1/ollama-app). This repository only supports the iOS platform. For other platforms, please visit [Ollama App](https://github.com/JHubi1/ollama-app).
+## Project Description
 
-## Disclaimer
+This project is an open-source project based on [Ollama App](https://github.com/JHubi1/ollama-app), with secondary development and modifications.
 
-- Since "Ollama" and the "alpaca logo" are registered trademarks, we use "GetOAI" and the "GetOAI logo" for App Store submission.
+- Only supports the iOS platform. For other platforms, please visit [Ollama App](https://github.com/JHubi1/ollama-app).
 
-- Publishing on the App Store and maintaining a developer account has higher costs compared to other platforms. To ensure the healthy development of this project, the app is distributed as a paid download.
+- Since "Ollama" and the "Ollama Icon" are registered trademarks, we use "GetOAI" and the "GetOAI Icon" for publication on the App Store.
 
-- This application is not the official Ollama client.
+- This project is not an official Ollama project.
+
 
 ## App Store
 
 > Search for **GetOAI** on the App Store
 
 [![Download on the App Store](https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg)](https://apps.apple.com/us/app/getoai/id6752573799)
+
+
+## Main characteristics
+
+1. Support the inference process of printing inference models
+
+2. Support generating dialogue titles that match the user's language
+
+3. Highlight active conversations
+
+4. Fix permission issues on the iOS platform
+
+5. Optimize the user experience
+
 
 ## Development Setup
 
